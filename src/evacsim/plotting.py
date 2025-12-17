@@ -1,11 +1,12 @@
 import matplotlib.pyplot as plt
 import networkx as nx
+from collections import abc
 
 # ======================================================================================================================
 # method to plot policy comparison histograms
 # ======================================================================================================================
 
-def plot_travel_times_by_policy(grouped_travel_times, percent_cars_finished_by_policy, num_timesteps, default_generation_rate, dpi=100):
+def plot_travel_times_by_policy(grouped_travel_times, percent_cars_finished_by_policy, num_timesteps, generation_rates, dpi=100):
     # 1. Determine unique generator IDs and policy names
     policy_names = list(grouped_travel_times.keys())
     # Collect all unique generator IDs across all policies
@@ -65,18 +66,20 @@ def plot_travel_times_by_policy(grouped_travel_times, percent_cars_finished_by_p
         for ax_row in axes:
             for ax in ax_row:
                 ax.set_xlim(global_min_time - 0.5, global_max_time + 1.5) # Add a small buffer
-
+                
+    default_generation_rate = generation_rates
+    if isinstance(default_generation_rate, abc.Mapping):
+        default_generation_rate = max(default_generation_rate.values())
     fig.suptitle(f'Car Travel Time Density by Generator and Policy.\nTimesteps Per Simulation: {num_timesteps}\nGenerator Rate: {default_generation_rate:.3f}', y=1.02, fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.98]) # Adjust layout to prevent title overlap
     plt.savefig(f'gen_hist_{default_generation_rate:.2f}.pdf', bbox_inches='tight')
-    plt.show()
-
+    # plt.show()
 
 # ======================================================================================================================
 # method to plot network graph with overlaid cost values
 # ======================================================================================================================
 
-def plot_network_with_generator_stats(G, policy_list, grouped_travel_times, intersection_costs_history, generation_rates, percent_cars_finished_by_policy, num_timesteps, dpi=100, seed=42) -> None:
+def plot_network_with_generator_stats(G, policy_list, grouped_travel_times, intersection_costs_history, generation_rates, percent_cars_finished_by_policy, num_timesteps, dpi=100, seed=42):
     fig, axes = plt.subplots(2, 2, figsize=(12, 10), dpi=dpi)
     axes = axes.flatten() # Flatten the 2x2 array of axes for easier iteration
 
@@ -126,4 +129,4 @@ def plot_network_with_generator_stats(G, policy_list, grouped_travel_times, inte
     plt.tight_layout()
     plt.suptitle(f"Traffic Network Statistics by Policy\nTimesteps: {num_timesteps}", y=1.02, fontsize=16)
     plt.savefig(f'net_states_{max([_ for _ in generation_rates.values()]):.2f}.pdf', bbox_inches='tight')
-    plt.show()
+    # plt.show()

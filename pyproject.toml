@@ -1,17 +1,21 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "evacsim"
 version = "0.1.0"
-description = "Queue-based evacuation traffic simulation with signal control policies."
+description = "Queue-based evacuation traffic simulation with signal policies."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
   "numpy",
+  "networkx",
   "matplotlib",
 ]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
