@@ -1,10 +1,4 @@
-from brentscheme.misc import permutation_matrix
-from brentscheme.BrentScheme import BrentScheme
-from brentscheme.SchemaFactory import SchemaFactory
-from brentscheme.SchemeDisplay import SchemeDisplay
-from brentscheme.SchemeManipulator import SchemeManipulator
-from brentscheme.Stepper import Stepper
-from brentscheme.Trainer import Trainer
+
 
 import math
 import numpy as np
@@ -23,7 +17,8 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # @title A Manipulation object for an existing scheme
 class SchemeManipulator(object):
-
+  from brentscheme.misc import permutation_matrix
+  
   def __init__(self):
     pass
 
@@ -39,6 +34,7 @@ class SchemeManipulator(object):
     scheme.gamma_nmp = gamma_nmp
 
     self.set_norm(scheme, norm=norm)
+    from brentscheme.SchemaFactory import SchemaFactory
     SchemaFactory().set_TRIPLE_DELTA(scheme)
 
   # change the norm or feild of the scheme (L1, L2, etc, R, C)
@@ -75,7 +71,9 @@ class SchemeManipulator(object):
 
   # enforce that alpha and beta have normalized components along p, using current or passed norm
   def normalize(self, scheme, verbose=0):
-    if verbose > 1: SchemeDisplay().print(scheme)
+    if verbose > 1: 
+      from brentscheme.SchemeDisplay import SchemeDisplay
+      SchemeDisplay().print(scheme)
     self.clean(scheme) # get rid of zero-norm products
 
     # make the matrix basis have balanced axis norms
@@ -206,6 +204,7 @@ class SchemeManipulator(object):
     scheme.n -= len(axes[0])
     scheme.d -= len(axes[1])
     scheme.m -= len(axes[2])
+    from brentscheme.SchemaFactory import SchemaFactory
     SchemaFactory().set_TRIPLE_DELTA(scheme)
 
   # drops the indicated product P_prod (int)
@@ -261,6 +260,8 @@ class SchemeManipulator(object):
     scheme.d = scheme.alpha_pnd.size(dim=2)
     scheme.m = scheme.gamma_nmp.size(dim=1)
     scheme.p = scheme.alpha_pnd.size(dim=0)
+    from brentscheme.SchemaFactory import SchemaFactory
+    factory = SchemaFactory()
     factory.set_TRIPLE_DELTA(scheme)
 
     self.set_norm(scheme, norm=scheme.L_norm, field=scheme.field)
@@ -279,9 +280,8 @@ class SchemeManipulator(object):
     #   u,_,__ = torch.linalg.svd(products)
     #   permutation = find_row_clustering(u, verbose=verbose)
 
+    from brentscheme.misc import permutation_matrix
     permutation = permutation_matrix(permutation)
     scheme.alpha_pnd = torch.einsum('ij,jaA->iaA', permutation, scheme.alpha_pnd)
     scheme.beta__pdm = torch.einsum('ij,jbB->ibB', permutation, scheme.beta__pdm)
     scheme.gamma_nmp = torch.einsum('cCj,ij->cCi', scheme.gamma_nmp, permutation)
-
-manipulator = SchemeManipulator()

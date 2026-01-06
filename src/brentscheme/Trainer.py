@@ -1,10 +1,3 @@
-from brentscheme.misc import permutation_matrix, random_unitary
-from brentscheme.BrentScheme import BrentScheme
-from brentscheme.SchemaFactory import SchemaFactory
-from brentscheme.SchemeDisplay import SchemeDisplay
-from brentscheme.SchemeManipulator import SchemeManipulator
-from brentscheme.Stepper import Stepper
-from brentscheme.Trainer import Trainer
 
 import math
 import numpy as np
@@ -23,18 +16,20 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # @title A Multi-step trainer for schema
 class Trainer(object):
-
+  
   def __init__(self, n=2, p=7, scheme='random'):
     self.num_epochs = 0
 
   def train(self, scheme, epochs=200, batch_size=1, lr=1e-7, momentum=0.9, use_L2=False, penalty=0.0, verbose=0):
-    try:
-      stepper = Stepper()
-      display = SchemeDisplay()
-      y = [list(display.test(scheme, verbose=1))]
-      import timeit
+    from brentscheme.Stepper import Stepper
+    stepper = Stepper()
+    from brentscheme.SchemeDisplay import SchemeDisplay
+    display = SchemeDisplay()
+    y = [list(display.test(scheme, verbose=1))]
 
-      start = timeit.timeit()
+    import timeit
+    start = timeit.timeit()
+    try:
       for i in range(epochs):
         if use_L2:
           stepper.epoch_pseudoinverse(scheme, batch_size=batch_size, verbose=1)
@@ -95,7 +90,9 @@ class Trainer(object):
   # unitary matrices are not Cholesky decomposable, nor are they constructable using this approach.
   # L2 error is invarient under change of basis - but others are not. Perhaps this suggests that these catchements are equivalent up to a basis change.
   def optimize_basis(self, scheme, batch_size=1000, lr=1e-6, loss_norm=np.inf, verbose=0):
+    from brentscheme.SchemeDisplay import SchemeDisplay
     printer = SchemeDisplay()
+    from brentscheme.SchemeManipulator import SchemeManipulator
     manipulator = SchemeManipulator()
 
     loss_fn = nn.L1Loss()
@@ -106,6 +103,7 @@ class Trainer(object):
 
     score1 = printer.test(scheme, verbose=1)
     score2 = [np.inf] * 3
+    from brentscheme.misc import random_unitary
     while score2[pos] >= score1[pos]:
       L = torch.nn.Parameter(torch.eye(scheme.n) + 1e-14*random_unitary(scheme.n)).type(torch.float64).to(device)
       M = torch.nn.Parameter(torch.eye(scheme.d) + 1e-14*random_unitary(scheme.d)).type(torch.float64).to(device)
@@ -132,5 +130,3 @@ class Trainer(object):
       return L.cpu().detach().type(torch.float64), M.cpu().detach().type(torch.float64), R.cpu().detach().type(torch.float64)
     else:
       return torch.eye(scheme.n), torch.eye(scheme.d), torch.eye(scheme.m)
-
-trainer = Trainer()

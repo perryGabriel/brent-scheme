@@ -1,11 +1,3 @@
-from brentscheme.misc import permutation_matrix
-from brentscheme.BrentScheme import BrentScheme
-from brentscheme.SchemaFactory import SchemaFactory
-from brentscheme.SchemeDisplay import SchemeDisplay
-from brentscheme.SchemeManipulator import SchemeManipulator
-from brentscheme.Stepper import Stepper
-from brentscheme.Trainer import Trainer
-
 import math
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,6 +15,8 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 #@title A Factory for setting preset schema
 class SchemaFactory(object):
+  from brentscheme.SchemeManipulator import SchemeManipulator
+
   def __init__(self):
       pass
 
@@ -60,6 +54,7 @@ class SchemaFactory(object):
       scheme.alpha_pnd = scheme.alpha_pnd.type(torch.complex128) + torch.normal(0, Im_std_dev, size=(scheme.p, scheme.n, scheme.d)).type(torch.complex128)*1j
       scheme.beta__pdm = scheme.beta__pdm.type(torch.complex128) + torch.normal(0, Im_std_dev, size=(scheme.p, scheme.d, scheme.m)).type(torch.complex128)*1j
       scheme.gamma_nmp = scheme.gamma_nmp.type(torch.complex128) + torch.normal(0, Im_std_dev, size=(scheme.n, scheme.m, scheme.p)).type(torch.complex128)*1j
+    from brentscheme.SchemeManipulator import SchemeManipulator
     SchemeManipulator().set_norm(scheme, norm=norm, field=field)
     self.set_TRIPLE_DELTA(scheme)
 
@@ -95,6 +90,7 @@ class SchemaFactory(object):
     vander_m = torch.vander(fourier_m, increasing=True).type(torch.complex128)
 
     # apply
+    from brentscheme.SchemeManipulator import SchemeManipulator
     if level == 1: SchemeManipulator().change_basis(scheme, M=vander_d)
     elif level == 2: SchemeManipulator().change_basis(scheme, L=vander_n, R=vander_m, M=vander_d)
     # FIXME: apply a fourier transform along the product axis as well
@@ -107,6 +103,7 @@ class SchemaFactory(object):
     scheme.alpha_pnd = torch.Tensor([[[ 1,0],[0, 1]],[[ 0,0],[1, 1]],[[ 1,0],[0, 0]],[[ 0,0],[0, 1]],[[ 1,1],[0, 0]],[[-1,0],[1, 0]],[[ 0,1],[0,-1]]]).type(torch.float64)
     scheme.beta__pdm  = torch.Tensor([[[ 1,0],[0, 1]],[[ 1,0],[0, 0]],[[ 0,1],[0,-1]],[[-1,0],[1, 0]],[[ 0,0],[0, 1]],[[ 1,1],[0, 0]],[[ 0,0],[1, 1]]]).type(torch.float64)
     scheme.gamma_nmp = torch.Tensor([[[1, 0,0,1,-1,0,1], [0, 0,1,0, 1,0,0]],[[0, 1,0,1, 0,0,0], [1,-1,1,0, 0,1,0]]]).type(torch.float64)
+    from brentscheme.SchemeManipulator import SchemeManipulator
     SchemeManipulator().set_norm(scheme, norm=1, field='R')
     self.set_TRIPLE_DELTA(scheme)
 
@@ -116,6 +113,7 @@ class SchemaFactory(object):
     scheme.alpha_pnd = torch.Tensor([[[ 1,0],[ 0, 0]],[[ 0,1],[ 0, 0]],[[ 1,1],[-1,-1]],[[ 0,0],[ 0, 1]],[[-1,0],[ 1, 0]],[[ 0,0],[ 1, 1]],[[-1,0],[ 1, 1]]]).type(torch.float64)
     scheme.beta__pdm  = torch.Tensor([[[ 1, 0],[0, 0]],[[ 0, 0],[1, 0]],[[ 0, 0],[0, 1]],[[-1, 1],[1,-1]],[[ 0, 1],[0,-1]],[[-1, 1],[0, 0]],[[ 1,-1],[0, 1]]]).type(torch.float64)
     scheme.gamma_nmp = torch.Tensor([[[1,1,0,0,0,0,0], [1,0,1,0,0,1,1]],[[1,0,0,1,1,0,1], [1,0,0,0,1,1,1]]]).type(torch.float64)
+    from brentscheme.SchemeManipulator import SchemeManipulator
     SchemeManipulator().set_norm(scheme, norm=1, field='R')
     self.set_TRIPLE_DELTA(scheme)
 
@@ -135,6 +133,7 @@ class SchemaFactory(object):
     scheme.gamma_nmp = torch.Tensor([[[0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0], [1,0,0,1,1,1,0,0,0,0,0,1,0,1,1,0,0,0,0,0,0,0,0], [0,0,0,0,0,1,1,0,1,1,0,0,0,1,0,1,0,1,0,0,0,0,0]],
                                [[0,1,1,1,0,1,0,0,0,0,0,0,0,1,0,1,1,0,0,0,0,0,0], [0,1,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0], [0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,1,1,0,0,1,0,0]],
                                [[0,0,0,0,0,1,1,1,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0], [0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,1,0], [0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1]]]).type(torch.float64)
+    from brentscheme.SchemeManipulator import SchemeManipulator
     SchemeManipulator().set_norm(scheme, norm=1, field='R')#15        20                  5        10        15        20                  5        10        15        20
     self.set_TRIPLE_DELTA(scheme)
 
@@ -157,11 +156,15 @@ class SchemaFactory(object):
     gamma_nmp = pickle.load(file1)
     file1.close()
 
+    from brentscheme.SchemeManipulator import SchemeManipulator
     SchemeManipulator().set(scheme, alpha_pnd, beta__pdm, gamma_nmp)
     self.set_TRIPLE_DELTA(scheme)
-    if verbose > 0: SchemeDisplay().print(scheme, verbose=verbose)
+    if verbose > 0:
+      from brentscheme.SchemeDisplay import SchemeDisplay
+      SchemeDisplay().print(scheme, verbose=verbose)
 
   def compose_schemes(self, outer, inner): # cCaAbBi, zZxXyY
+    from brentscheme.BrentScheme import BrentScheme
     result = BrentScheme()
     result.n = outer.n * inner.n
     result.d = outer.d * inner.d
@@ -172,5 +175,3 @@ class SchemaFactory(object):
     result.alpha_pnd = torch.einsum('iaA,jxX->ijaxAX', outer.alpha_pnd, inner.alpha_pnd).reshape((result.p, result.n, result.d))
     result.beta__pdm = torch.einsum('ibB,jyY->ijbyBY', outer.beta__pdm, inner.beta__pdm).reshape((result.p, result.d, result.m))
     return result
-
-factory = SchemaFactory()

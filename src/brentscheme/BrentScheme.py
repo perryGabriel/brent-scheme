@@ -1,10 +1,3 @@
-from brentscheme.misc import permutation_matrix
-from brentscheme.SchemaFactory import SchemaFactory
-from brentscheme.SchemeDisplay import SchemeDisplay
-from brentscheme.SchemeManipulator import SchemeManipulator
-from brentscheme.Stepper import Stepper
-from brentscheme.Trainer import Trainer
-
 import math
 import numpy as np
 import matplotlib.pyplot as plt
@@ -38,12 +31,14 @@ class BrentScheme(nn.Module):
     self.p = self.n*self.d*self.m if p is None else p
     if verbose > 0: print(f"A scheme for ({self.n} x {self.d}) @ ({self.d} x {self.m}) using {self.p} products: complexity is n^{self.complexity():.3f}")
 
+    from brentscheme.SchemaFactory import SchemaFactory
     factory = SchemaFactory()
     factory.set_scheme(self, preset=preset)
     factory.set_TRIPLE_DELTA(self)
 
   def clone(self):
     test_scheme = BrentScheme()
+    from brentscheme.SchemeManipulator import SchemeManipulator
     manipulator = SchemeManipulator()
     manipulator.set(test_scheme, self.alpha_pnd.clone(), self.beta__pdm.clone(), self.gamma_nmp.clone())
     return test_scheme
@@ -64,5 +59,3 @@ class BrentScheme(nn.Module):
       return torch.einsum("cCi,iaA,ibB->cCaAbB", self.gamma_nmp, self.alpha_pnd, self.beta__pdm)
     else:
       return torch.einsum("cCi,iaA,ibB,aA,bB->cC", self.gamma_nmp, self.alpha_pnd, self.beta__pdm, A_nd, B_dm)
-
-scheme = BrentScheme()

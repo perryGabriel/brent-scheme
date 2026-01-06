@@ -1,11 +1,3 @@
-from brentscheme.misc import permutation_matrix
-from brentscheme.BrentScheme import BrentScheme
-from brentscheme.SchemaFactory import SchemaFactory
-from brentscheme.SchemeDisplay import SchemeDisplay
-from brentscheme.SchemeManipulator import SchemeManipulator
-from brentscheme.Stepper import Stepper
-from brentscheme.Trainer import Trainer
-
 import math
 import numpy as np
 import matplotlib.pyplot as plt
@@ -86,5 +78,3 @@ class Stepper(object):
     scheme.beta__pdm = beta.cpu().detach().type(torch.float64)
     scheme.gamma_nmp = gamma.cpu().detach().type(torch.float64)
     return
-
-stepper = Stepper()
