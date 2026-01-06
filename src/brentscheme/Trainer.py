@@ -1,4 +1,5 @@
-from brentscheme.misc import permutation_matrix
+from brentscheme.misc import permutation_matrix, random_unitary
+from brentscheme.BrentScheme import BrentScheme
 from brentscheme.SchemaFactory import SchemaFactory
 from brentscheme.SchemeDisplay import SchemeDisplay
 from brentscheme.SchemeManipulator import SchemeManipulator
@@ -94,6 +95,9 @@ class Trainer(object):
   # unitary matrices are not Cholesky decomposable, nor are they constructable using this approach.
   # L2 error is invarient under change of basis - but others are not. Perhaps this suggests that these catchements are equivalent up to a basis change.
   def optimize_basis(self, scheme, batch_size=1000, lr=1e-6, loss_norm=np.inf, verbose=0):
+    printer = SchemeDisplay()
+    manipulator = SchemeManipulator()
+
     loss_fn = nn.L1Loss()
     pos = 0
     if loss_norm == np.inf:
@@ -122,7 +126,7 @@ class Trainer(object):
       cost.backward()
       optimizer.step()
       if verbose > 0 and i % (batch_size//10) == 0:
-        display(cost.item())
+        print(cost.item())
 
     if cost < 10**score1[pos]:
       return L.cpu().detach().type(torch.float64), M.cpu().detach().type(torch.float64), R.cpu().detach().type(torch.float64)

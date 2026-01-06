@@ -1,4 +1,5 @@
 from brentscheme.misc import permutation_matrix
+from brentscheme.BrentScheme import BrentScheme
 from brentscheme.SchemaFactory import SchemaFactory
 from brentscheme.SchemeDisplay import SchemeDisplay
 from brentscheme.SchemeManipulator import SchemeManipulator

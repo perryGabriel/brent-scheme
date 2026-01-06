@@ -44,6 +44,7 @@ class BrentScheme(nn.Module):
 
   def clone(self):
     test_scheme = BrentScheme()
+    manipulator = SchemeManipulator()
     manipulator.set(test_scheme, self.alpha_pnd.clone(), self.beta__pdm.clone(), self.gamma_nmp.clone())
     return test_scheme
 
