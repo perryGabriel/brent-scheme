@@ -36,6 +36,6 @@ brent-scheme/
 
 To use this package locally, install it directly from this github repository:
 
-`pip install "git+https://github.com/perryGabriel/evacuation-traffic-games.git"`
+`pip install "git+https://github.com/perryGabriel/brent-scheme.git"`
 
 The script `scripts/run_expiriments.py` provided in this repository is a minimal working example to replicate the results from the paper, included as a PDF in this repository.
