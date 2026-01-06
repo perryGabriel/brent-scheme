@@ -1,4 +1,4 @@
-# Evacuation Traffic Queuing Simulation
+# Brent-Type Tensor Schemes for Fast Matrix Multiplication
 
 
 ## Motivation
@@ -12,18 +12,22 @@
 ## Repository Structure
 
 ```text
-evacuation-traffic-games/
+brent-scheme/
 ├─ notebooks/
-│  └─ evac_simulation.ipynb          # original Colab/interactive exploration
+│  ├─ NUMPY Mat_Mult.ipynb           # original Colab/interactive exploration
+│  └─ TORCH_Mat_Mult.ipynb           # updated Colab/interactive exploration
 ├─ scripts/
 │  └─ run_experiments.py             # command-line entrypoint to reproduce figures/results
 ├─ src/
-│  └─ evacsim/
+│  └─ brentscheme/
 │     ├─ __init__.py                 # public API re-exports (see below)
-│     ├─ sim.py                      # network generation + simulation loop(s)
-│     ├─ policies.py                 # signal-control policies
-│     └─ plotting.py                 # plotting utilities for paper-style figures
-├─ CS_501R_Final_Project_Traffic_Queuing__IEEE_.pdf  # paper/report
+│     ├─ BrentScheme.py              # 
+│     ├─ misc.py                     # 
+│     ├─ SchemaFactory.py            # 
+│     ├─ SchemeDisplay.py            # 
+│     ├─ SchemeManipulatior.py       # 
+│     ├─ Stepper.py                  # 
+│     └─ Trainer.py                  # 
 ├─ pyproject.toml                    # packaging config (editable install support)
 ├─ README.md
 └─ .gitignore
