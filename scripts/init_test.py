@@ -1,0 +1,1 @@
+scheme = BrentScheme(n=3, d=2, m=4, p=8, verbose=1)

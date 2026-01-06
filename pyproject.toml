@@ -3,15 +3,19 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "evacsim"
+name = "brentscheme"
 version = "0.1.0"
-description = "Queue-based evacuation traffic simulation with signal policies."
+description = "Tensor schemes for fast matrix multiplication."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+  "math",
   "numpy",
-  "networkx",
   "matplotlib",
+  "tqdm",
+  "pandas",
+  "time",
+  "torch"
 ]
 
 [tool.setuptools]
