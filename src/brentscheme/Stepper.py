@@ -1,10 +1,9 @@
-from .BrentScheme import BrentScheme
-from .misc import permutation_matrix
-from .SchemaFactory import SchemaFactory
-from .SchemeDisplay import SchemeDisplay
-from .SchemeManipulator import SchemeManipulator
-from .Stepper import Stepper
-from .Trainer import Trainer
+from brentscheme.misc import permutation_matrix
+from brentscheme.SchemaFactory import SchemaFactory
+from brentscheme.SchemeDisplay import SchemeDisplay
+from brentscheme.SchemeManipulator import SchemeManipulator
+from brentscheme.Stepper import Stepper
+from brentscheme.Trainer import Trainer
 
 import math
 import numpy as np
