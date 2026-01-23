@@ -1,5 +1,4 @@
 from brentscheme.BrentScheme import BrentScheme
-from brentscheme.misc import permutation_matrix, random_unitary, rand_square, random_right_invertible, delete_file
 from brentscheme.SchemaFactory import SchemaFactory
 from brentscheme.SchemeDisplay import SchemeDisplay
 from brentscheme.Stepper import Stepper
@@ -17,8 +16,8 @@ epochs = 50
 
 for i in range(epochs):
   stepper.epoch_pseudoinverse(scheme)
-if printer.test(scheme) > -1.0:
-  print("Run pseudoinverse test again, may be faulty: ", printer.test(scheme))
+if printer.error(scheme) > -1.0:
+  print("Run pseudoinverse test again, may be faulty: ", printer.error(scheme))
 
 print("="*40)
 print("TEST 2: TORCH STEP")
@@ -27,5 +26,5 @@ epochs = 300
 
 for i in range(epochs):
   stepper.epoch(scheme, momentum=0.9)
-if printer.test(scheme) > -1:
-  print("Run torch test again, may be faulty: ", printer.test(scheme))
+if printer.error(scheme) > -1:
+  print("Run torch test again, may be faulty: ", printer.error(scheme))

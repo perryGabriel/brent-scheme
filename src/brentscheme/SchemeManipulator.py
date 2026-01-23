@@ -17,7 +17,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # @title A Manipulation object for an existing scheme
 class SchemeManipulator(object):
-  from brentscheme.misc import permutation_matrix
+  from brentscheme.utils.tensors import permutation_matrix
   
   def __init__(self):
     pass
@@ -35,7 +35,7 @@ class SchemeManipulator(object):
 
     self.set_norm(scheme, norm=norm)
     from brentscheme.SchemaFactory import SchemaFactory
-    SchemaFactory().set_TRIPLE_DELTA(scheme)
+    SchemaFactory().set_triple_delta(scheme)
 
   # change the norm or feild of the scheme (L1, L2, etc, R, C)
   def set_norm(self, scheme, norm=1, field=None):
@@ -205,7 +205,7 @@ class SchemeManipulator(object):
     scheme.d -= len(axes[1])
     scheme.m -= len(axes[2])
     from brentscheme.SchemaFactory import SchemaFactory
-    SchemaFactory().set_TRIPLE_DELTA(scheme)
+    SchemaFactory().set_triple_delta(scheme)
 
   # drops the indicated product P_prod (int)
   def drop_product(self, scheme, prod=None, verbose=0):
@@ -262,7 +262,7 @@ class SchemeManipulator(object):
     scheme.p = scheme.alpha_pnd.size(dim=0)
     from brentscheme.SchemaFactory import SchemaFactory
     factory = SchemaFactory()
-    factory.set_TRIPLE_DELTA(scheme)
+    factory.set_triple_delta(scheme)
 
     self.set_norm(scheme, norm=scheme.L_norm, field=scheme.field)
 
@@ -280,7 +280,7 @@ class SchemeManipulator(object):
     #   u,_,__ = torch.linalg.svd(products)
     #   permutation = find_row_clustering(u, verbose=verbose)
 
-    from brentscheme.misc import permutation_matrix
+    from brentscheme.utils.tensors import permutation_matrix
     permutation = permutation_matrix(permutation)
     scheme.alpha_pnd = torch.einsum('ij,jaA->iaA', permutation, scheme.alpha_pnd)
     scheme.beta__pdm = torch.einsum('ij,jbB->ibB', permutation, scheme.beta__pdm)

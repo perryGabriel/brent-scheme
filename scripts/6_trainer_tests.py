@@ -1,5 +1,4 @@
 from brentscheme.BrentScheme import BrentScheme
-from brentscheme.misc import permutation_matrix, random_unitary, rand_square, random_right_invertible, delete_file
 from brentscheme.SchemaFactory import SchemaFactory
 from brentscheme.SchemeDisplay import SchemeDisplay
 from brentscheme.SchemeManipulator import SchemeManipulator
@@ -26,48 +25,48 @@ print("TEST 2: L1 Norm Trainer Test, should be bad")
 factory.set_scheme(scheme, 'random', n=3, d=3, m=3, p=22)
 manipulator.set_norm(scheme, norm=1, field='R')
 trainer.train(scheme, epochs=500, batch_size=10, use_L2=False, verbose=1)
-printer.print(scheme, verbose=1)
-printer.print_triple_deltas(scheme)
+printer.report(scheme, verbose=1)
+printer.plot_triple_deltas(scheme)
 
 print("="*40)
 print("TEST 3: L2 Norm Trainer Test, should be bad")
 factory.set_scheme(scheme, 'random', n=3, d=3, m=3, p=22)
 trainer.train(scheme, epochs=500, batch_size=10, use_L2=False, verbose=1)
-printer.print(scheme, verbose=1)
-printer.print_triple_deltas(scheme)
+printer.report(scheme, verbose=1)
+printer.plot_triple_deltas(scheme)
 
 print("="*40)
 print("TEST 2: L1000 Norm Trainer Test, should be bad")
 factory.set_scheme(scheme, 'random', n=3, d=3, m=3, p=22)
 manipulator.set_norm(scheme, norm=1000, field='R')
 trainer.train(scheme, epochs=500, batch_size=10, use_L2=False, verbose=1)
-printer.print(scheme, verbose=1)
-printer.print_triple_deltas(scheme)
+printer.report(scheme, verbose=1)
+printer.plot_triple_deltas(scheme)
 
 print("="*40)
 print("TEST 1: Train Using Pseudoinverse Projection, should be good")
 factory.set_scheme(scheme, 'random', n=3, d=3, m=3, p=22)
 trainer.train(scheme, epochs=500, batch_size=1, use_L2=True, verbose=1)
-printer.print_triple_deltas(scheme)
+printer.plot_triple_deltas(scheme)
 
 print("="*40)
 print("TEST 2: Train Using Infinity Norm (LP), should be mid")
 manipulator.set_norm(scheme, norm=torch.inf, field='R')
-printer.print(scheme, verbose=1)
+printer.report(scheme, verbose=1)
 trainer.train(scheme, epochs=200, batch_size=10, lr=1e-5, penalty=1e-7, use_L2=False, verbose=1)
-printer.print_triple_deltas(scheme)
+printer.plot_triple_deltas(scheme)
 
 print("="*40)
 print("TEST 3: Train Using Infinity Norm (LP), should be good")
 factory.set_scheme(scheme, 'random', n=3, d=3, m=3, p=27)
 manipulator.set_norm(scheme, norm=torch.inf, field='R')
-printer.print(scheme, verbose=1)
+printer.report(scheme, verbose=1)
 trainer.train(scheme, epochs=200, batch_size=10, lr=1e-2, penalty=1e-5, use_L2=False, verbose=1)
-printer.print_triple_deltas(scheme)
+printer.plot_triple_deltas(scheme)
 
 print("="*40)
-print("TEST 4: Hail Mary Train")
+print("TEST 4: Test Plot of Errors During Training")
 factory.set_scheme(scheme, 'random', n=3, d=3, m=3, p=22)
-trainer.train(scheme, epochs=500, batch_size=1, lr=1e-2, use_L2=False, penalty=1e-5, verbose=1)
-if printer.test(scheme, verbose=0) < -1.0:
-    printer.print(scheme, verbose=4)
+trainer.train(scheme, epochs=500, batch_size=1, lr=1e-2, use_L2=False, penalty=1e-5, verbose=2)
+if printer.error(scheme) < -1.0:
+    printer.report(scheme, verbose=4)

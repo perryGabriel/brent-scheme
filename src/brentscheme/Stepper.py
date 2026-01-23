@@ -1,12 +1,3 @@
-import math
-import numpy as np
-import matplotlib.pyplot as plt
-from tqdm import trange
-import pandas as pd
-import time
-
-from tqdm import tqdm
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -14,7 +5,6 @@ import torch.optim as optim
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # @title A Single-Step trainer for schema
-
 class Stepper(object):
 
   def __init__(self):

@@ -25,7 +25,7 @@ class Trainer(object):
     stepper = Stepper()
     from brentscheme.SchemeDisplay import SchemeDisplay
     display = SchemeDisplay()
-    y = [list(display.test(scheme, verbose=1))]
+    y = [list(display.metrics(scheme).as_tuple())]
 
     import timeit
     start = timeit.timeit()
@@ -35,7 +35,7 @@ class Trainer(object):
           stepper.epoch_pseudoinverse(scheme, batch_size=batch_size, verbose=1)
         else:
           stepper.epoch(scheme, batch_size=batch_size, lr=lr, momentum=momentum, penalty=penalty)
-        y.append(list(display.test(scheme, verbose=1)))
+        y.append(list(display.metrics(scheme).as_tuple()))
         # add the filter or other normalization here
 
       self.num_epochs = self.num_epochs + epochs*batch_size
@@ -60,21 +60,7 @@ class Trainer(object):
       # plt.plot(x, params[0] * np.exp(-params[1] * x) + params[2], color='red', linestyle='--')
 
       plt.plot([i for i in range(epochs+1)], [j[0] for j in y], color='blue', label='L1')
-      plt.title(f"Normalized Error For n={scheme.n}, p={scheme.p}: Ran in {np.abs(runtime):.4f} sec.")
-      plt.xlabel(f"Number of Epochs: {self.num_epochs}")
-      plt.ylabel(f"Average Error of Output Entries (Log 10)")
-      plt.grid(axis='y')
-      plt.legend()
-      plt.show()
-
       plt.plot([i for i in range(epochs+1)], [j[1] for j in y], color='black', label='L2')
-      plt.title(f"Normalized Error For n={scheme.n}, p={scheme.p}: Ran in {np.abs(runtime):.4f} sec.")
-      plt.xlabel(f"Number of Epochs: {self.num_epochs}")
-      plt.ylabel(f"Average Error of Output Entries (Log 10)")
-      plt.grid(axis='y')
-      plt.legend()
-      plt.show()
-
       plt.plot([i for i in range(epochs+1)], [j[2] for j in y], color='red', label='Linf')
       plt.title(f"Normalized Error For n={scheme.n}, p={scheme.p}: Ran in {np.abs(runtime):.4f} sec.")
       plt.xlabel(f"Number of Epochs: {self.num_epochs}")
@@ -101,16 +87,16 @@ class Trainer(object):
       loss_fn = lambda x,y:torch.max(torch.abs(x-y))
       pos = 2
 
-    score1 = printer.test(scheme, verbose=1)
+    score1 = printer.error(scheme)
     score2 = [np.inf] * 3
-    from brentscheme.misc import random_unitary
+    from brentscheme.utils.tensors import random_unitary
     while score2[pos] >= score1[pos]:
       L = torch.nn.Parameter(torch.eye(scheme.n) + 1e-14*random_unitary(scheme.n)).type(torch.float64).to(device)
       M = torch.nn.Parameter(torch.eye(scheme.d) + 1e-14*random_unitary(scheme.d)).type(torch.float64).to(device)
       R = torch.nn.Parameter(torch.eye(scheme.m) + 1e-14*random_unitary(scheme.m)).type(torch.float64).to(device)
       test_scheme = scheme.clone()
       manipulator.change_basis(test_scheme, L=L, M=M, R=R)
-      score2 = printer.test(test_scheme, verbose=1)
+      score2 = printer.error(test_scheme)
 
     optimizer = optim.Adam([L, M, R], lr=lr)
 

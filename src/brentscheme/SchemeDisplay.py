@@ -1,112 +1,218 @@
-import math
-import numpy as np
-import matplotlib.pyplot as plt
-from tqdm import trange
-import pandas as pd
-import time
+from __future__ import annotations
 
-from tqdm import tqdm
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional
 
 import torch
-import torch.nn as nn
-import torch.optim as optim
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
-
-# @title A Display object for printing and saving data about a scheme, including accuracy tests
-class SchemeDisplay(object):
-
-  def __init__(self):
-    pass
-
-  def print(self, scheme, verbose=0):
-    print(f"Network trained for ({scheme.n} x {scheme.d}) @ ({scheme.d} x {scheme.m}) using {scheme.p} out of {scheme.n*scheme.d*scheme.m} multiplications; complexity is n^{scheme.complexity():.3f}\n\nUsing the L{scheme.L_norm} norm over the field {scheme.field}\n")
-
-    if verbose > 0:
-      self.test(scheme, verbose=2)
-      print("")
-
-    if verbose > 1:
-      alphas = [[f'{scheme.alpha_pnd[pi,aj,ak]: .3f}*A[{aj+1},{ak+1}]' if scheme.alpha_pnd[pi,aj,ak] != 0.0 else "" for aj in range(scheme.n) for ak in range(scheme.d)] for pi in range(scheme.p)]
-      alpha_sums = ["".join([f'{alphas[pi][elem]} + ' if alphas[pi][elem] != "" else "" for elem in range(scheme.n*scheme.d)])[:-3] for pi in range(scheme.p)]
-
-      betas = [[f'{scheme.beta__pdm[pi,bj,bk]: .3f}*B[{bj+1},{bk+1}]' if scheme.beta__pdm[pi,bj,bk] != 0.0 else "" for bj in range(scheme.d) for bk in range(scheme.m)] for pi in range(scheme.p)]
-      beta_sums  = ["".join([f'{betas[pi][elem]} + ' if betas[pi][elem] != "" else "" for elem in range(scheme.d*scheme.m)])[:-3] for pi in range(scheme.p)]
-
-      products = [f'({alpha_sums[pi]}) * ({beta_sums[pi]})' for pi in range(scheme.p)]
-      print("Products P_i = (alpha_ind * A_nd) * (beta_idm * B_dm)")
-      for pi in range(scheme.p): print(f"P_{pi+1} =", products[pi])
-      print("")
-
-      gammas = [[[f'{scheme.gamma_nmp[gi,gj,gk]: .3f}*P_{gk+1}' if scheme.gamma_nmp[gi,gj,gk] != 0.0 else "" for gk in range(scheme.p)] for gj in range(scheme.m)] for gi in range(scheme.n)]
-      gamma_sums = [["".join([f'{gammas[c1][c2][pi]} + ' if gammas[c1][c2][pi] != "" else "" for pi in range(scheme.p)])[:-3] for c2 in range(scheme.m)]for c1 in range(scheme.n)]
-      print("Outputs AB_nm = gamma_nmi * P_i")
-      for c1 in range(scheme.n):
-        for c2 in range(scheme.m):
-          print(f"AB[{c1+1},{c2+1}] =", gamma_sums[c1][c2])
-      print("")
-
-  def print_triple_deltas(self, scheme, output=None):
-    if output is None:
-      output = scheme.forward().reshape((scheme.n*scheme.d*scheme.m, scheme.n*scheme.d*scheme.m))
-    target = scheme.TRIPLE_DELTA_nmnddm.reshape((scheme.n*scheme.d*scheme.m, scheme.n*scheme.d*scheme.m))
-    error = output - target
-
-    plt.figure(figsize=(12,4))
-
-    plt.subplot(1,3,1)
-    plt.imshow(target, cmap='seismic', interpolation='nearest')
-    plt.title("Exact")
-
-    plt.subplot(1,3,2)
-    plt.imshow(output, cmap='seismic', interpolation='nearest')
-    plt.title("Approximation")
-
-    plt.subplot(1,3,3)
-    plt.imshow(error, cmap='seismic', interpolation='nearest')
-    plt.title(f"Max Error: {torch.max(torch.abs(error)):.5f}")
-    plt.show()
-
-  ### TEST ###
-
-  def test(self, scheme, _range=10, num=200, verbose=0):
-    error = (scheme.forward() - scheme.TRIPLE_DELTA_nmnddm)
-    err_size = error.numel()
-
-    if verbose == 0:
-      return torch.log10(scheme.measure(error)).item()
-
-    mags = torch.abs(error)
-    L1 = torch.sum(mags) / err_size
-    L2 = (torch.sum(mags**2) / err_size)**0.5
-    Linf = torch.max(mags)
-
-    if verbose == 1:
-      return torch.log10(L1).item(), torch.log10(L2).item(), torch.log10(Linf).item()
-
-    print(f'Avg L1 error: 10^{torch.log10(L1):.4f}, Avg L2 error: 10^{torch.log10(L2):.4f}, max error: 10^{torch.log10(Linf):.4f}')
-
-    if verbose > 2:
-      self.print_triple_deltas(scheme)
 
 
+@dataclass(slots=True)
+class SchemeMetrics:
+    log10_L1: float
+    log10_L2: float
+    log10_Linf: float
 
-  ### FILE SAVE FUNCTIONS ###
+    def as_tuple(self) -> tuple[float, float, float]:
+        return (self.log10_L1, self.log10_L2, self.log10_Linf)
 
-  def dump_to_file(self, scheme, number=None):
-    if number is None:
-      number = round(self.test(scheme, verbose=0),3)
-    else:
-      number = round(number,3)
-    import pickle
-    file1 = open(f'{scheme.n}_{scheme.d}_{scheme.m}_{scheme.p}_e{number:.3f}_alpha_pnd.pkl', 'wb')
-    pickle.dump(scheme.alpha_pnd, file1)
-    file1.close()
-    file1 = open(f'{scheme.n}_{scheme.d}_{scheme.m}_{scheme.p}_e{number:.3f}_beta__pdm.pkl', 'wb')
-    pickle.dump(scheme.beta__pdm, file1)
-    file1.close()
-    file1 = open(f'{scheme.n}_{scheme.d}_{scheme.m}_{scheme.p}_e{number:.3f}_gamma_nmp.pkl', 'wb')
-    pickle.dump(scheme.gamma_nmp, file1)
-    file1.close()
 
-    return number
+@dataclass(slots=True)
+class SchemeDisplay:
+    """
+    Reporting / evaluation / persistence utilities for a BrentScheme-like object.
+
+    Expected scheme interface:
+      - n, d, m, p
+      - complexity() -> float
+      - L_norm, field
+      - forward() -> Tensor  (either (n,m,n,d,d,m) or already comparable to TRIPLE_DELTA)
+      - TRIPLE_DELTA_nmnddm : Tensor broadcast-compatible with forward()
+      - measure(tensor) -> Tensor (scalar)
+
+      - alpha_pnd, beta__pdm, gamma_nmp tensors for verbose algebra display
+    """
+
+    directory: Path = Path(".")
+    precision: int = 3
+    missing_ok: bool = True
+
+    # ---------- public API ----------
+
+    def summary(self, scheme) -> str:
+        """Return a one-paragraph human readable summary."""
+        return (
+            f"Scheme for ({scheme.n}×{scheme.d}) @ ({scheme.d}×{scheme.m}) using p={scheme.p} "
+            f"out of {scheme.n * scheme.d * scheme.m} products; "
+            f"complexity n^{scheme.complexity():.3f}\n"
+            f"Norm: L{scheme.L_norm} over field {scheme.field}"
+        )
+
+    def error(self, scheme) -> float:
+        """
+        Return log10(measure(error)) like your old test(verbose=0).
+        """
+        error = self._error_tensor(scheme)
+        return float(torch.log10(scheme.measure(error)).item())
+
+    def metrics(self, scheme) -> SchemeMetrics:
+        """
+        Return (log10 L1, log10 L2, log10 Linf) averaged over entries,
+        matching your old test(verbose=1).
+        """
+        error = self._error_tensor(scheme)
+        mags = error.abs()
+        err_size = mags.numel()
+
+        L1 = mags.sum() / err_size
+        L2 = (mags.square().sum() / err_size).sqrt()
+        Linf = mags.max()
+
+        return SchemeMetrics(
+            log10_L1=float(torch.log10(L1).item()),
+            log10_L2=float(torch.log10(L2).item()),
+            log10_Linf=float(torch.log10(Linf).item()),
+        )
+
+    def report(self, scheme, *, verbose: int = 0) -> None:
+        """
+        Print a report. (Side-effecting convenience wrapper.)
+        verbose:
+          0: summary only
+          1: summary + metrics line
+          2: + prints algebraic decomposition (large)
+          3: + shows triple-delta plots (very large)
+        """
+        print(self.summary(scheme))
+
+        if verbose >= 1:
+            mets = self.metrics(scheme)
+            print(
+                f"Avg L1 error: 10^{mets.log10_L1:.4f}, "
+                f"Avg L2 error: 10^{mets.log10_L2:.4f}, "
+                f"Max error: 10^{mets.log10_Linf:.4f}"
+            )
+
+        if verbose >= 2:
+            print()
+            print(self.algebra(scheme))
+
+        if verbose >= 3:
+            self.plot_triple_deltas(scheme)
+
+    def algebra(self, scheme) -> str:
+        """
+        Return a (potentially long) string describing the bilinear form:
+          P_i = (alpha_i ⋅ A) * (beta_i ⋅ B)
+          AB = gamma ⋅ P
+        """
+        lines: list[str] = []
+        fmt = f" .{self.precision}f"
+
+        # Products
+        lines.append("Products P_i = (alpha_i · A) * (beta_i · B)")
+        for pi in range(scheme.p):
+            a_terms = []
+            for aj in range(scheme.n):
+                for ak in range(scheme.d):
+                    c = scheme.alpha_pnd[pi, aj, ak].item()
+                    if c != 0.0:
+                        a_terms.append(f"{c:{fmt}}*A[{aj+1},{ak+1}]")
+            b_terms = []
+            for bj in range(scheme.d):
+                for bk in range(scheme.m):
+                    c = scheme.beta__pdm[pi, bj, bk].item()
+                    if c != 0.0:
+                        b_terms.append(f"{c:{fmt}}*B[{bj+1},{bk+1}]")
+
+            a_sum = " + ".join(a_terms) if a_terms else "0"
+            b_sum = " + ".join(b_terms) if b_terms else "0"
+            lines.append(f"P_{pi+1} = ({a_sum}) * ({b_sum})")
+
+        lines.append("")
+        lines.append("Outputs AB = gamma · P")
+        for i in range(scheme.n):
+            for j in range(scheme.m):
+                terms = []
+                for k in range(scheme.p):
+                    c = scheme.gamma_nmp[i, j, k].item()
+                    if c != 0.0:
+                        terms.append(f"{c:{fmt}}*P_{k+1}")
+                rhs = " + ".join(terms) if terms else "0"
+                lines.append(f"AB[{i+1},{j+1}] = {rhs}")
+
+        return "\n".join(lines)
+
+    def plot_triple_deltas(self, scheme, *, output: Optional[torch.Tensor] = None) -> None:
+        """
+        Plot exact vs approximation vs error. Requires matplotlib.
+        """
+        import matplotlib.pyplot as plt
+
+        if output is None:
+            output = self._flatten(scheme.forward(), scheme)
+        else:
+            output = self._flatten(output, scheme)
+
+        target = self._flatten(scheme.TRIPLE_DELTA_nmnddm, scheme)
+        error = output - target
+
+        plt.figure(figsize=(12, 4))
+
+        plt.subplot(1, 3, 1)
+        plt.imshow(target.detach().cpu(), cmap="seismic", interpolation="nearest")
+        plt.title("Exact")
+
+        plt.subplot(1, 3, 2)
+        plt.imshow(output.detach().cpu(), cmap="seismic", interpolation="nearest")
+        plt.title("Approximation")
+
+        plt.subplot(1, 3, 3)
+        plt.imshow(error.detach().cpu(), cmap="seismic", interpolation="nearest")
+        plt.title(f"Max Error: {error.abs().max().item():.5f}")
+
+        plt.show()
+
+    def dump_tensors(self, scheme, *, score: Optional[float] = None) -> float:
+        """
+        Save alpha/beta/gamma tensors to pickle files in `directory`.
+
+        If score is None, computes it via `error()` and uses that in the filename.
+        Returns the rounded score used in filenames.
+        """
+        import pickle
+
+        used = round(self.error(scheme) if score is None else score, 3)
+        prefix = self._prefix(scheme, used)
+
+        self.directory.mkdir(parents=True, exist_ok=True)
+
+        for suffix, tensor in [
+            ("alpha_pnd.pkl", scheme.alpha_pnd),
+            ("beta__pdm.pkl", scheme.beta__pdm),
+            ("gamma_nmp.pkl", scheme.gamma_nmp),
+        ]:
+            path = self.directory / f"{prefix}{suffix}"
+            with path.open("wb") as f:
+                pickle.dump(tensor, f)
+
+        return used
+
+    def delete_tensors(self, scheme, *, score: float) -> None:
+        """Delete the tensor pickle files for this scheme/score."""
+        used = round(score, 3)
+        prefix = self._prefix(scheme, used)
+        for suffix in ("alpha_pnd.pkl", "beta__pdm.pkl", "gamma_nmp.pkl"):
+            (self.directory / f"{prefix}{suffix}").unlink(missing_ok=self.missing_ok)
+
+    # ---------- internals ----------
+
+    def _prefix(self, scheme, score: float) -> str:
+        return f"{scheme.n}_{scheme.d}_{scheme.m}_{scheme.p}_e{score:.3f}_"
+
+    def _flatten(self, T: torch.Tensor, scheme) -> torch.Tensor:
+        n = scheme.n * scheme.d * scheme.m
+        return T.reshape((n, n))
+
+    def _error_tensor(self, scheme) -> torch.Tensor:
+        return scheme.forward() - scheme.TRIPLE_DELTA_nmnddm
