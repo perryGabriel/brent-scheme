@@ -28,3 +28,37 @@ for i in range(epochs):
   stepper.epoch(scheme, momentum=0.9)
 if printer.error(scheme) > -1:
   print("Run torch test again, may be faulty: ", printer.error(scheme))
+
+print("="*40)
+print("TEST 3: LINEAR PROGRAM using INF NORM")
+
+from brentscheme.SchemeManipulator import SchemeManipulator
+import numpy as np
+import torch
+
+np.random.seed(1)
+scheme = BrentScheme(n=2,d=2,m=2,p=6)
+printer.report(scheme, verbose=1)
+printer = SchemeDisplay()
+manipulator = SchemeManipulator()
+stepper = Stepper()
+
+L2_score = lambda x: torch.sum(torch.square(x.forward() - x.TRIPLE_DELTA_nmnddm))
+Linf_score = lambda x: torch.max(torch.abs(x.forward() - x.TRIPLE_DELTA_nmnddm))
+printer.plot_triple_deltas(scheme)
+
+manipulator.set_norm(scheme, 1)
+
+from tqdm import trange
+for i in trange(100):
+  # stepper.epoch_pseudoinverse(scheme, batch_size=10)
+  if L2_score(scheme) < 1e-6:
+    break
+  stepper.optimize(scheme, batch_size=2, method=stepper.optimize_infinity_norm)
+  if Linf_score(scheme) < 1e-6:
+    break
+
+  manipulator.normalize(scheme)
+
+printer.report(scheme, verbose=1)
+printer.plot_triple_deltas(scheme)

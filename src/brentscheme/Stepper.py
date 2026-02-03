@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-from utils.tensors import block_diag
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -79,7 +78,10 @@ class Stepper(object):
     problem.solve()
     return x.value
 
-  def optimize(self, scheme, batch_size, method=self.optimize_infinity_norm): # default to Linf (stepper is better for projection)
+  def optimize(self, scheme, batch_size, method=None): # default to Linf (stepper is better for projection)
+    from brentscheme.utils.tensors import block_diag
+    if method is None:
+      method = self.optimize_infinity_norm
     for i in range(batch_size):
       AB = block_diag(np.einsum('iaA,ibB->aAbBi', scheme.alpha_pnd, scheme.beta__pdm).reshape((scheme.n*scheme.d**2*scheme.m, scheme.p)), scheme.n*scheme.m) # add cC axes
       AB_d = np.einsum('cCaAbB->aAbBcC', scheme.TRIPLE_DELTA_nmnddm).reshape((scheme.n*scheme.d**2*scheme.m, scheme.n*scheme.m)).flatten(order='F')
