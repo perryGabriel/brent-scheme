@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import numpy as np
+from utils.tensors import block_diag
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -68,3 +70,25 @@ class Stepper(object):
     scheme.beta__pdm = beta.cpu().detach().type(torch.float64)
     scheme.gamma_nmp = gamma.cpu().detach().type(torch.float64)
     return
+
+  def optimize_infinity_norm(self, A: np.ndarray, b: np.ndarray, p=np.inf) -> np.ndarray:
+    import cvxpy as cp
+    x = cp.Variable(A.shape[1])
+    objective = cp.Minimize(cp.norm(A @ x - b, p=p))
+    problem = cp.Problem(objective)
+    problem.solve()
+    return x.value
+
+  def optimize(self, scheme, batch_size, method=self.optimize_infinity_norm): # default to Linf (stepper is better for projection)
+    for i in range(batch_size):
+      AB = block_diag(np.einsum('iaA,ibB->aAbBi', scheme.alpha_pnd, scheme.beta__pdm).reshape((scheme.n*scheme.d**2*scheme.m, scheme.p)), scheme.n*scheme.m) # add cC axes
+      AB_d = np.einsum('cCaAbB->aAbBcC', scheme.TRIPLE_DELTA_nmnddm).reshape((scheme.n*scheme.d**2*scheme.m, scheme.n*scheme.m)).flatten(order='F')
+      scheme.gamma_nmp = torch.from_numpy(method(AB, AB_d).reshape((scheme.n, scheme.m, scheme.p)))
+
+      AG = block_diag(np.einsum('iaA,cCi->aAcCi', scheme.alpha_pnd, scheme.gamma_nmp).reshape((scheme.n**2*scheme.d*scheme.m, scheme.p)), scheme.d*scheme.m) # add bB axes
+      AG_d = np.einsum('cCaAbB->aAcCbB', scheme.TRIPLE_DELTA_nmnddm).reshape((scheme.n**4, scheme.n**2)).flatten(order='F')
+      scheme.beta__pdm = torch.from_numpy(method(AG, AG_d).reshape((scheme.d, scheme.m, scheme.p)).transpose(2,0,1))
+
+      BG = block_diag(np.einsum('ibB,cCi->bBcCi', scheme.beta__pdm,  scheme.gamma_nmp).reshape((scheme.n*scheme.d*scheme.m**2, scheme.p)), scheme.n*scheme.d) # add aA axes
+      BG_d = np.einsum('cCaAbB->bBcCaA', scheme.TRIPLE_DELTA_nmnddm).reshape((scheme.n**4, scheme.n**2)).flatten(order='F')
+      scheme.alpha_pnd = torch.from_numpy(method(BG, BG_d).reshape((scheme.n, scheme.d, scheme.p)).transpose(2,0,1))

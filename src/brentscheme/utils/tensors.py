@@ -3,7 +3,14 @@ from __future__ import annotations
 from typing import Optional, Sequence
 
 import torch
+import numpy as np
 
+def block_diag(matrix, n):
+    m, k = matrix.shape
+    result = np.zeros((m * n, k * n))
+    for i in range(n):
+      result[i * m:(i + 1) * m, i * k:(i + 1) * k] = matrix
+    return result
 
 def permutation_matrix(
     indices: Sequence[int],
