@@ -78,7 +78,7 @@ class Stepper(object):
     problem.solve()
     return x.value
 
-  def optimize(self, scheme, batch_size, method=None): # default to Linf (stepper is better for projection)
+  def optimize(self, scheme, batch_size=1, method=None): # default to Linf (stepper is better for projection)
     from brentscheme.utils.tensors import block_diag
     if method is None:
       method = self.optimize_infinity_norm
@@ -88,9 +88,9 @@ class Stepper(object):
       scheme.gamma_nmp = torch.from_numpy(method(AB, AB_d).reshape((scheme.n, scheme.m, scheme.p)))
 
       AG = block_diag(np.einsum('iaA,cCi->aAcCi', scheme.alpha_pnd, scheme.gamma_nmp).reshape((scheme.n**2*scheme.d*scheme.m, scheme.p)), scheme.d*scheme.m) # add bB axes
-      AG_d = np.einsum('cCaAbB->aAcCbB', scheme.TRIPLE_DELTA_nmnddm).reshape((scheme.n**4, scheme.n**2)).flatten(order='F')
+      AG_d = np.einsum('cCaAbB->aAcCbB', scheme.TRIPLE_DELTA_nmnddm).reshape((scheme.n**2*scheme.d*scheme.m, scheme.d*scheme.m)).flatten(order='F')
       scheme.beta__pdm = torch.from_numpy(method(AG, AG_d).reshape((scheme.d, scheme.m, scheme.p)).transpose(2,0,1))
 
       BG = block_diag(np.einsum('ibB,cCi->bBcCi', scheme.beta__pdm,  scheme.gamma_nmp).reshape((scheme.n*scheme.d*scheme.m**2, scheme.p)), scheme.n*scheme.d) # add aA axes
-      BG_d = np.einsum('cCaAbB->bBcCaA', scheme.TRIPLE_DELTA_nmnddm).reshape((scheme.n**4, scheme.n**2)).flatten(order='F')
+      BG_d = np.einsum('cCaAbB->bBcCaA', scheme.TRIPLE_DELTA_nmnddm).reshape((scheme.n*scheme.d*scheme.m**2, scheme.n*scheme.d)).flatten(order='F')
       scheme.alpha_pnd = torch.from_numpy(method(BG, BG_d).reshape((scheme.n, scheme.d, scheme.p)).transpose(2,0,1))

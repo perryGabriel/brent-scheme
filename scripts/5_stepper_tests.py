@@ -1,7 +1,10 @@
 from brentscheme.BrentScheme import BrentScheme
 from brentscheme.SchemaFactory import SchemaFactory
+from brentscheme.SchemeManipulator import SchemeManipulator
 from brentscheme.SchemeDisplay import SchemeDisplay
 from brentscheme.Stepper import Stepper
+import numpy as np
+import torch
 
 scheme = BrentScheme(n=3, d=2, m=4, p=8, verbose=0)
 factory = SchemaFactory()
@@ -31,13 +34,8 @@ if printer.error(scheme) > -1:
 
 print("="*40)
 print("TEST 3: LINEAR PROGRAM using INF NORM")
-
-from brentscheme.SchemeManipulator import SchemeManipulator
-import numpy as np
-import torch
-
 np.random.seed(1)
-scheme = BrentScheme(n=2,d=2,m=2,p=6)
+scheme = BrentScheme(n=2,d=3,m=4,p=20)
 printer.report(scheme, verbose=1)
 printer = SchemeDisplay()
 manipulator = SchemeManipulator()
