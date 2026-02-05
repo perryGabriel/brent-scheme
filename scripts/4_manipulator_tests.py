@@ -6,10 +6,11 @@ from brentscheme.SchemeManipulator import SchemeManipulator
 import numpy as np
 import torch
 
-scheme = BrentScheme(n=3, d=2, m=4, p=8, verbose=0)
+scheme = BrentScheme(n=2, d=2, m=2, p=8, verbose=0)
 factory = SchemaFactory()
 printer = SchemeDisplay()
 manipulator = SchemeManipulator()
+
 
 print("="*40)
 print("Setting different norms and fields, printing scheme, norm, and log error for each...")

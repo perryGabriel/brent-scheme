@@ -69,6 +69,47 @@ class SchemeManipulator(object):
 
   ### CLEAN UP AN EXISTING SCHEME ###
 
+  def _canonicalize_product_signs(self, scheme):
+      """
+      For each product index p, ensure the first nonzero entry (row-major)
+      across alpha[p,:,:], beta[p,:,:], gamma[:,:,p] is positive.
+
+      For complex tensors, positivity means positive real part.
+      """
+      for p in range(scheme.p):
+
+          # Collect flattened views in row-major (C) order
+          slices = (
+              scheme.alpha_pnd[p].reshape(-1),
+              scheme.beta__pdm[p].reshape(-1),
+              scheme.gamma_nmp[:, :, p].reshape(-1),
+          )
+
+          sign = None
+
+          for vec in slices:
+              # Find first nonzero
+              for val in vec:
+                  if val != 0:
+                      # Real case
+                      if not torch.is_complex(val):
+                          sign = 1.0 if val > 0 else -1.0
+                      # Complex case: use real part
+                      else:
+                          sign = 1.0 if val.real > 0 else -1.0
+                      break
+              if sign is not None:
+                  break
+
+          # All zero slice (shouldn't happen after clean, but be safe)
+          if sign is None or sign == 1.0:
+              continue
+
+          # Flip all three consistently
+          scheme.alpha_pnd[p, :, :] *= sign
+          scheme.beta__pdm[p, :, :] *= sign
+          scheme.gamma_nmp[:, :, p] *= sign
+
   # enforce that alpha and beta have normalized components along p, using current or passed norm
   def normalize(self, scheme, verbose=0):
     if verbose > 1: 
@@ -140,6 +181,7 @@ class SchemeManipulator(object):
     scheme.beta__pdm = scheme.beta__pdm[permutation_p,:,:] / beta__mags_p[permutation_p].reshape(-1,1,1) * avg_mags_p.reshape(-1,1,1)
     scheme.gamma_nmp = scheme.gamma_nmp[:,:,permutation_p] / gamma_mags_p[permutation_p].reshape(1,1,-1) * avg_mags_p.reshape(1,1,-1)
 
+    self._canonicalize_product_signs(scheme)
     if verbose > 0: print("new product magnitudes: ", avg_mags_p)
 
   # if the tensors have a zero magnitude in a p-axis cross section, drop that p index

@@ -56,7 +56,10 @@ for i in trange(100):
   if Linf_score(scheme) < 1e-6:
     break
 
+  # manipulator.enforce_zero_num(scheme, 8)
   manipulator.normalize(scheme)
 
 printer.report(scheme, verbose=1)
 printer.plot_triple_deltas(scheme)
+# manipulator.enforce_zero_num(scheme, 0, decay_factor=0.0)
+# _ = printer.dump_tensors(scheme)
