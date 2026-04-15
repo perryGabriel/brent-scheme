@@ -2,15 +2,17 @@ from __future__ import annotations
 
 from typing import Optional, Sequence
 
-import torch
 import numpy as np
+import torch
+
 
 def block_diag(matrix, n):
     m, k = matrix.shape
     result = np.zeros((m * n, k * n))
     for i in range(n):
-      result[i * m:(i + 1) * m, i * k:(i + 1) * k] = matrix
+        result[i * m:(i + 1) * m, i * k:(i + 1) * k] = matrix
     return result
+
 
 def permutation_matrix(
     indices: Sequence[int],
@@ -18,23 +20,9 @@ def permutation_matrix(
     dtype: torch.dtype = torch.float64,
     device: torch.device | str | None = None,
 ) -> torch.Tensor:
-    """
-    Return the permutation matrix P such that P @ x == x[indices].
-
-    Parameters
-    ----------
-    indices:
-        A permutation (or general reindexing) of 0..n-1.
-    dtype, device:
-        Tensor dtype and device.
-
-    Returns
-    -------
-    (n, n) tensor with exactly one 1 in each row (and typically each column).
-    """
+    """Return permutation matrix ``P`` such that ``P @ x == x[indices]``."""
     idx = torch.as_tensor(indices, dtype=torch.long, device=device)
     n = idx.numel()
-    # Row i picks column idx[i]
     return torch.eye(n, dtype=dtype, device=device).index_select(dim=1, index=idx)
 
 
@@ -45,28 +33,13 @@ def random_unitary(
     device: torch.device | str | None = None,
     generator: Optional[torch.Generator] = None,
 ) -> torch.Tensor:
-    """
-    Sample a random orthogonal matrix Q (a "random unitary" in the real case)
-    using QR decomposition of a standard normal matrix.
-
-    Notes
-    -----
-    - For real-valued tensors, Q is orthogonal: Q.T @ Q = I.
-    - The QR sign ambiguity is fixed to make diag(R) nonnegative.
-
-    This avoids SciPy and stays on the chosen device.
-
-    Returns
-    -------
-    Q : (n, n) tensor
-    """
+    """Sample a random orthogonal/unitary-like matrix using QR decomposition."""
     A = torch.randn((n, n), dtype=dtype, device=device, generator=generator)
     Q, R = torch.linalg.qr(A, mode="reduced")
-    # Fix sign ambiguity so it's more stable/reproducible in distribution.
     diag = torch.diagonal(R)
     phase = torch.sign(diag)
     phase = torch.where(phase == 0, torch.ones_like(phase), phase)
-    Q = Q * phase  # broadcasts over columns
+    Q = Q * phase
     return Q
 
 
@@ -77,7 +50,7 @@ def rand_square(
     device: torch.device | str | None = None,
     generator: Optional[torch.Generator] = None,
 ) -> torch.Tensor:
-    """Return an (n, n) standard normal matrix."""
+    """Return an ``(n, n)`` standard normal matrix."""
     return torch.randn((n, n), dtype=dtype, device=device, generator=generator)
 
 
@@ -90,29 +63,7 @@ def random_right_invertible(
     device: torch.device | str | None = None,
     generator: Optional[torch.Generator] = None,
 ) -> torch.Tensor:
-    """
-    Construct a random (l, r) matrix with full row rank (right-invertible when r >= l).
-
-    Construction
-    -----------
-    A = U_l @ [diag(s) | 0] @ U_r
-    where U_l (l×l) and U_r (r×r) are random orthogonal matrices.
-
-    Parameters
-    ----------
-    l:
-        Number of rows.
-    r:
-        Number of columns. If None or < l, set r = l.
-    s:
-        Singular values for the l rows (shape (l,)). If None, uses all ones.
-    dtype, device, generator:
-        Tensor options.
-
-    Returns
-    -------
-    A : (l, r) tensor
-    """
+    """Construct random right-invertible matrix of shape ``(l, r)`` with ``r >= l``."""
     if r is None or r < l:
         r = l
 
@@ -126,8 +77,65 @@ def random_right_invertible(
     U_l = random_unitary(l, dtype=dtype, device=device, generator=generator)
     U_r = random_unitary(r, dtype=dtype, device=device, generator=generator)
 
-    # Build [diag(s) | 0] as (l, r)
     S = torch.zeros((l, r), dtype=dtype, device=device)
     S[:, :l] = torch.diag(s_vec)
 
     return U_l @ S @ U_r
+
+
+def mode_n_product(tensor: torch.Tensor, matrix: torch.Tensor, mode: int) -> torch.Tensor:
+    """Apply an n-mode product of ``tensor`` by ``matrix`` along ``mode``.
+
+    If tensor has shape ``(I0, ..., In, ..., Ik)`` and matrix has shape ``(J, In)``,
+    result has shape ``(I0, ..., J, ..., Ik)``.
+    """
+    if mode < 0 or mode >= tensor.ndim:
+        raise ValueError(f"mode must be in [0, {tensor.ndim - 1}], got {mode}")
+    if matrix.ndim != 2:
+        raise ValueError("matrix must be rank-2")
+    if matrix.shape[1] != tensor.shape[mode]:
+        raise ValueError(
+            f"matrix second dim ({matrix.shape[1]}) must equal tensor mode dim ({tensor.shape[mode]})"
+        )
+
+    moved = torch.movedim(tensor, mode, 0)
+    out = torch.tensordot(matrix, moved, dims=([1], [0]))
+    return torch.movedim(out, 0, mode)
+
+
+def hosvd(
+    tensor: torch.Tensor,
+    *,
+    ranks: Sequence[int] | None = None,
+) -> tuple[torch.Tensor, list[torch.Tensor]]:
+    """Compute (optionally truncated) HOSVD.
+
+    Returns ``(core, factors)`` where:
+    - ``factors[i]`` has shape ``(tensor.shape[i], rank_i)``
+    - ``core`` has shape ``tuple(rank_i)``
+
+    Set ``ranks=None`` for full HOSVD ranks.
+    """
+    if tensor.ndim < 2:
+        raise ValueError("hosvd expects tensor with ndim >= 2")
+
+    shape = tensor.shape
+    if ranks is None:
+        ranks = shape
+    if len(ranks) != tensor.ndim:
+        raise ValueError(f"ranks length ({len(ranks)}) must match ndim ({tensor.ndim})")
+
+    factors: list[torch.Tensor] = []
+    for mode, (dim, rank) in enumerate(zip(shape, ranks)):
+        if rank <= 0 or rank > dim:
+            raise ValueError(f"rank for mode {mode} must be in [1, {dim}], got {rank}")
+
+        unfolding = torch.movedim(tensor, mode, 0).reshape(dim, -1)
+        U, _, _ = torch.linalg.svd(unfolding, full_matrices=False)
+        factors.append(U[:, :rank])
+
+    core = tensor
+    for mode, U in enumerate(factors):
+        core = mode_n_product(core, U.mT.conj(), mode)
+
+    return core, factors
