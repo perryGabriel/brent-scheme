@@ -1,4 +1,13 @@
+import sys
+from pathlib import Path
+
 import pytest
+
+# Ensure local src/ layout is importable without editable install.
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
 from brentscheme.BrentScheme import BrentScheme
 from brentscheme.SchemaFactory import SchemaFactory
@@ -17,5 +26,4 @@ def printer():
 
 @pytest.fixture
 def scheme():
-    # fresh scheme per test to avoid state leakage
     return BrentScheme(n=3, d=3, m=3, p=27, verbose=0)
